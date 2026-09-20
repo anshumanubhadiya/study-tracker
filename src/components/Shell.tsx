@@ -41,9 +41,22 @@ export function Shell({ children }: { children: ReactNode }) {
     if (authChecked && state && isAuthPage) router.replace("/");
   }, [authChecked, state, isAuthPage, router]);
 
+  // The service worker used to cache the app shell and kept serving STALE
+  // page code after deploys — users who signed in successfully were bounced
+  // back to the login page because the old login page had no session-token
+  // support. So: never register one, and unregister anything that exists.
   useEffect(() => {
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => {});
+      navigator.serviceWorker
+        .getRegistrations()
+        .then((regs) => Promise.all(regs.map((r) => r.unregister())))
+        .catch(() => {});
+    }
+    if (typeof caches !== "undefined") {
+      caches
+        .keys()
+        .then((ks) => Promise.all(ks.map((k) => caches.delete(k))))
+        .catch(() => {});
     }
   }, []);
 

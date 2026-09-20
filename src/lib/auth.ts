@@ -43,9 +43,15 @@ export function readToken(token: string | undefined): number | null {
 
 export async function setSession(userId: number) {
   const jar = await cookies();
+  // The preview is embedded in an iframe (third-party context). A `lax`
+  // cookie is not sent there, which made sign-in look broken. `none` +
+  // `secure` is the only way for the cookie to work embedded; the
+  // Authorization-token fallback in client-auth.ts covers the browsers that
+  // block third-party cookies entirely.
   jar.set(COOKIE, makeToken(userId), {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "none",
+    secure: true,
     path: "/",
     maxAge: 60 * 60 * 24 * 180,
   });

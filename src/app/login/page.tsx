@@ -194,6 +194,20 @@ export default function LoginPage() {
 
       {error ? <div className="err">{error}</div> : null}
 
+      {error && error.includes("already has a profile") ? (
+        <button
+          className="btn"
+          style={{ marginTop: 4 }}
+          onClick={() => {
+            setError("");
+            setMode("login");
+          }}
+        >
+          <Icon name="logout" />
+          This is my profile — take me to sign in
+        </button>
+      ) : null}
+
       <div className="sect-f" style={{ marginTop: 26, textAlign: "center" }}>
         Works for any university, course and semester. A sample GTU BCA Sem 3 library ships built-in — every other
         semester grows from what students scan.
