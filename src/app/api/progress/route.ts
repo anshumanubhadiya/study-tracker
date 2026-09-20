@@ -14,7 +14,7 @@ type Body = {
 };
 
 export async function POST(req: Request) {
-  const user = await currentUser();
+  const user = await currentUser(req);
   if (!user) return unauthorized();
 
   const body = await readJsonBody<Body | Body[]>(req);

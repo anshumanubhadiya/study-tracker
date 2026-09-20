@@ -10,8 +10,8 @@ import type { AppState } from "@/lib/types";
 export const dynamic = "force-dynamic";
 
 /** GET — full JSON backup of this profile (the "yours to keep" export) */
-export async function GET() {
-  const user = await currentUser();
+export async function GET(req: Request) {
+  const user = await currentUser(req);
   if (!user) return unauthorized();
   const state = await loadState(user);
   const payload = {
@@ -41,7 +41,7 @@ export async function GET() {
 
 /** POST — merge a backup (or a classmate's shared plan) back in */
 export async function POST(req: Request) {
-  const user = await currentUser();
+  const user = await currentUser(req);
   if (!user) return unauthorized();
   const body = await readJsonBody<Partial<AppState> & { plan?: AppState["plan"]; mode?: "merge" | "plan-only" }>(req);
   if (!body) return Response.json({ error: "Invalid request body" }, { status: 400 });

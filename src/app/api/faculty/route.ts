@@ -10,9 +10,9 @@ export const dynamic = "force-dynamic";
  * Only profiles that switched `facultyOptIn` on are counted, and nothing
  * identifying ever leaves this endpoint — just class-level averages.
  */
-export async function GET() {
+export async function GET(req: Request) {
   await ensureDb();
-  const user = await currentUser();
+  const user = await currentUser(req);
   if (!user) return unauthorized();
 
   const rows = await db.execute(sql`

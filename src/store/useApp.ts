@@ -2,19 +2,26 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { authHeaders, saveSessionToken } from "@/lib/client-auth";
 import type { AppState, Mastery, UserDTO, UserSettings } from "@/lib/types";
 
 /* ------------------------------------------------------------- api call -- */
 
 async function api<T>(url: string, body?: unknown, method = "POST"): Promise<T> {
+  const headers: Record<string, string> = { ...authHeaders() };
+  if (body) headers["content-type"] = "application/json";
   const res = await fetch(url, {
     method: body === undefined && method === "POST" ? "GET" : method,
-    headers: body ? { "content-type": "application/json" } : undefined,
+    headers: Object.keys(headers).length ? headers : undefined,
     body: body ? JSON.stringify(body) : undefined,
     cache: "no-store",
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((data as { error?: string }).error ?? "Something went wrong");
+  if (!res.ok) {
+    const err = (data as { error?: string }).error ?? "Something went wrong";
+    if (res.status === 401) saveSessionToken(null); // dead session — drop the token
+    throw new Error(err);
+  }
   return data as T;
 }
 
@@ -159,6 +166,7 @@ export const useApp = create<Store>()(
 
       async logout() {
         await api("/api/auth/logout", {});
+        saveSessionToken(null);
         set({ state: null, active: null, authError: "" });
       },
 

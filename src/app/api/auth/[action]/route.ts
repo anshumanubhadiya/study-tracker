@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { clearSession, currentUser, hashPassword, setSession, verifyPassword } from "@/lib/auth";
+import { clearSession, currentUser, hashPassword, makeToken, setSession, verifyPassword } from "@/lib/auth";
 import { MAX_SEMESTER, MIN_SEMESTER } from "@/lib/seed-data";
 import { ensureDb } from "@/lib/bootstrap";
 import { ensureSeed, seedDemoData, toUserDTO } from "@/lib/server-data";
@@ -45,7 +45,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ action: string
       .returning();
     await seedDemoData(user.id);
     await setSession(user.id);
-    return Response.json({ ok: true, user: toUserDTO(user) });
+    return Response.json({ ok: true, user: toUserDTO(user), token: makeToken(user.id) });
   }
 
   let body: {
@@ -85,7 +85,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ action: string
       .returning();
     if (body.demo) await seedDemoData(user.id);
     await setSession(user.id);
-    return Response.json({ ok: true, user: toUserDTO(user) });
+    return Response.json({ ok: true, user: toUserDTO(user), token: makeToken(user.id) });
   }
 
   if (action === "login") {
@@ -95,15 +95,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ action: string
       return Response.json({ error: "Wrong email or password." }, { status: 401 });
     }
     await setSession(user.id);
-    return Response.json({ ok: true, user: toUserDTO(user) });
+    return Response.json({ ok: true, user: toUserDTO(user), token: makeToken(user.id) });
   }
 
   return Response.json({ error: "Unknown action" }, { status: 404 });
 }
 
-export async function GET(_req: Request, ctx: { params: Promise<{ action: string }> }) {
+export async function GET(req: Request, ctx: { params: Promise<{ action: string }> }) {
   const { action } = await ctx.params;
   if (action !== "me") return Response.json({ error: "Unknown action" }, { status: 404 });
-  const user = await currentUser();
+  const user = await currentUser(req);
   return Response.json({ user: user ? toUserDTO(user) : null });
 }

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Icon } from "@/components/Icons";
+import { saveSessionToken } from "@/lib/client-auth";
 import { MAX_SEMESTER } from "@/lib/seed-data";
 import { useApp } from "@/store/useApp";
 
@@ -33,8 +34,12 @@ export default function LoginPage() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body ?? {}),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? "Could not sign in");
+      // keep the session in localStorage too — in some preview/embedded
+      // contexts the browser will not persist the httpOnly cookie, and
+      // every later request would silently arrive signed-out
+      saveSessionToken(data.token ?? null);
       await load();
       router.replace("/");
     } catch (e) {

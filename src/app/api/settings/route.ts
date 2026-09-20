@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   await ensureDb();
-  const user = await currentUser();
+  const user = await currentUser(req);
   if (!user) return unauthorized();
   const body = await readJsonBody<{
     name?: string;

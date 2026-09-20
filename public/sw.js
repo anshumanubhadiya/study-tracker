@@ -6,7 +6,7 @@
    are NEVER cached — a cached "not signed in" would silently log the user
    out on the next offline/hiccup reload. */
 
-const CACHE = "gtu-study-v2";
+const CACHE = "gtu-study-v3";
 const SHELL = ["/", "/plan", "/session", "/library", "/progress", "/settings", "/manifest.webmanifest", "/icon.png"];
 
 /* shared reference data — safe to cache for everyone */
@@ -57,18 +57,18 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  /* pages are NETWORK-FIRST: a cache-first page would keep serving stale
+     app code (old login page without the session-token fix) after deploys */
   event.respondWith(
-    caches.match(request).then(
-      (cached) =>
-        cached ||
-        fetch(request)
-          .then((res) => {
-            const copy = res.clone();
-            if (res.ok) caches.open(CACHE).then((c) => c.put(request, copy));
-            return res;
-          })
-          .catch(() => caches.match("/")),
-    ),
+    fetch(request)
+      .then((res) => {
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(request, copy));
+        }
+        return res;
+      })
+      .catch(() => caches.match(request).then((r) => r || caches.match("/"))),
   );
 });
 

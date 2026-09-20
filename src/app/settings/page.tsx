@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { Icon } from "@/components/Icons";
 import { Card, Header, Row, Section, Seg, Sheet, Stepper, Switch } from "@/components/ui";
+import { authHeaders } from "@/lib/client-auth";
 import { coachSuggestions, type Suggestion } from "@/lib/coach";
 import { fmtMinutes } from "@/lib/derive";
 import { useApp } from "@/store/useApp";
@@ -51,7 +52,7 @@ export default function SettingsPage() {
   }
 
   async function exportJson() {
-    const res = await fetch("/api/data");
+    const res = await fetch("/api/data", { headers: authHeaders() });
     const blob = await res.blob();
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -240,7 +241,7 @@ export default function SettingsPage() {
           sub="Class average study time, no names"
           chevron
           onClick={async () => {
-            const res = await fetch("/api/faculty");
+            const res = await fetch("/api/faculty", { headers: authHeaders() });
             setFaculty(await res.json());
             setFacultyOpen(true);
           }}
