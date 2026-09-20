@@ -42,6 +42,7 @@ type Store = {
   state: AppState | null;
   loading: boolean;
   authChecked: boolean;
+  authError: string;
   toast: string;
   active: ActiveSession | null;
 
@@ -53,6 +54,8 @@ type Store = {
     name?: string;
     theme?: string;
     accent?: string;
+    university?: string;
+    course?: string;
     semester?: number;
     settings?: Partial<UserSettings>;
   }) => Promise<void>;
@@ -84,6 +87,7 @@ export const useApp = create<Store>()(
       state: null,
       loading: true,
       authChecked: false,
+      authError: "",
       toast: "",
       active: null,
 
@@ -91,9 +95,9 @@ export const useApp = create<Store>()(
         set({ loading: true });
         try {
           const state = await api<AppState>("/api/state", undefined, "GET");
-          set({ state, loading: false, authChecked: true });
-        } catch {
-          set({ state: null, loading: false, authChecked: true });
+          set({ state, loading: false, authChecked: true, authError: "" });
+        } catch (e) {
+          set({ state: null, loading: false, authChecked: true, authError: e instanceof Error ? e.message : "" });
         }
       },
 
@@ -155,7 +159,7 @@ export const useApp = create<Store>()(
 
       async logout() {
         await api("/api/auth/logout", {});
-        set({ state: null, active: null });
+        set({ state: null, active: null, authError: "" });
       },
 
       startSession(topicIds, kind, focusMinutes) {

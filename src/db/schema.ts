@@ -20,6 +20,8 @@ export const users = pgTable("users", {
   name: text("name").notNull().default("Student"),
   passwordHash: text("password_hash").notNull(),
   isGuest: boolean("is_guest").notNull().default(false),
+  university: text("university").notNull().default("GTU"),
+  course: text("course").notNull().default("BCA"),
   semester: integer("semester").notNull().default(3),
   theme: text("theme").notNull().default("dark"),
   accent: text("accent").notNull().default("lime"),
@@ -60,7 +62,7 @@ export const units = pgTable(
     subjectId: integer("subject_id").notNull(),
     number: integer("number").notNull().default(1),
     title: text("title").notNull(),
-    weightage: integer("weightage").notNull().default(0), // GTU exam marks
+    weightage: integer("weightage").notNull().default(0), // exam marks weightage
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("units_subject_idx").on(t.subjectId)],

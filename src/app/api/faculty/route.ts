@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { currentUser, unauthorized } from "@/lib/auth";
+import { ensureDb } from "@/lib/bootstrap";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
  * identifying ever leaves this endpoint — just class-level averages.
  */
 export async function GET() {
+  await ensureDb();
   const user = await currentUser();
   if (!user) return unauthorized();
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/Icons";
 import { Card, Header, Row, Section, Sheet, Stepper } from "@/components/ui";
@@ -17,6 +18,7 @@ import { toDayKey } from "@/lib/srs";
 import { useApp } from "@/store/useApp";
 
 export default function PlanPage() {
+  const router = useRouter();
   const { state, planAction, setToast } = useApp();
   const [selected, setSelected] = useState(() => toDayKey(new Date()));
   const [addOpen, setAddOpen] = useState(false);
@@ -62,7 +64,7 @@ export default function PlanPage() {
 
   function sharePlan() {
     const payload = {
-      app: "gtu-study-tracker",
+      app: "study-tracker",
       kind: "study-plan",
       semester: state!.user.semester,
       plan: state!.plan.map((p) => ({
@@ -76,7 +78,7 @@ export default function PlanPage() {
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `gtu-study-plan-sem${state!.user.semester}.json`;
+    a.download = `study-plan-sem${state!.user.semester}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
     setToast("Plan file saved — send it to a classmate");
@@ -232,6 +234,22 @@ export default function PlanPage() {
         </div>
 
         <span className="sect-t">Subject</span>
+        {subjects.length === 0 ? (
+          <div className="progline warn" style={{ marginBottom: 14 }}>
+            <Icon name="alert" />
+            <span>
+              No subjects in Semester {state.user.semester} yet. Add your syllabus in the{" "}
+              <button
+                className="lrow-c"
+                style={{ color: "var(--acc)", background: "none", border: "none", cursor: "pointer", font: "inherit", padding: 0 }}
+                onClick={() => router.push("/library")}
+              >
+                Library
+              </button>{" "}
+              first.
+            </span>
+          </div>
+        ) : null}
         <div className="chips" style={{ marginBottom: 14 }}>
           {subjects.map((s) => (
             <button

@@ -4,11 +4,11 @@ import "./globals.css";
 import { Shell } from "@/components/Shell";
 
 export const metadata: Metadata = {
-  title: "GTU Study Tracker",
+  title: "Study Tracker",
   description:
-    "Syllabus-aware study companion for GTU students — scan your syllabus, run guided Pomodoro sessions, and track exam readiness with spaced repetition.",
+    "Syllabus-aware study companion for any university, course and semester — scan your syllabus, run guided Pomodoro sessions, and track exam readiness with spaced repetition.",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "GTU Study" },
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Study" },
   icons: { icon: "/icon.png", apple: "/icon.png" },
 };
 

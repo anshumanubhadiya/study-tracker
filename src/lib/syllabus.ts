@@ -1,8 +1,8 @@
 /* ============================================================================
-   Syllabus Scanner — text → structured GTU syllabus
+   Syllabus Scanner — text → structured syllabus (any university)
    ----------------------------------------------------------------------------
    OCR (Tesseract, in the browser) hands us a noisy blob of text from a photo or
-   a PDF page of the GTU syllabus. This turns it into subject → units → topics
+   a PDF page of the student's syllabus. This turns it into subject → units → topics
    with marks weightage, which is then shown in an EDITABLE form before anything
    touches the library. Deterministic and dependency-free, so the same parser
    runs on the client (instant preview) and on the server (import endpoint).
@@ -172,7 +172,7 @@ export function parseSyllabusText(raw: string, fallbackSemester = 3): ScanReport
   // ---- weightage clean-up --------------------------------------------------
   const marksFound = parsed.units.some((u) => u.weightage > 0 || u.topics.some((t) => t.weightage > 0));
   if (!marksFound && parsed.units.length) {
-    // GTU theory paper is 70 marks — spread it evenly as a starting guess
+    // a typical theory paper is 70 marks — spread it evenly as a starting guess
     const per = Math.round(70 / parsed.units.length);
     parsed.units.forEach((u) => (u.weightage = per));
     warnings.push("No marks column found — 70 marks split evenly across units (editable).");

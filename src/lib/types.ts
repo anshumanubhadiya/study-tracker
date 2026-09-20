@@ -134,6 +134,8 @@ export type UserDTO = {
   email: string;
   name: string;
   isGuest: boolean;
+  university: string;
+  course: string;
   semester: number;
   theme: "dark" | "light";
   accent: string;

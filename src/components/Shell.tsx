@@ -94,7 +94,7 @@ export function Shell({ children }: { children: ReactNode }) {
       <main id="app">
         <div className="hdr">
           <div>
-            <h1>GTU Study</h1>
+            <h1>Study</h1>
             <div className="sub">Loading your library…</div>
           </div>
         </div>

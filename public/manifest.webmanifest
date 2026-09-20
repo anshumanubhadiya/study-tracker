@@ -1,7 +1,7 @@
 {
-  "name": "GTU Study Tracker",
-  "short_name": "GTU Study",
-  "description": "Scan your GTU syllabus, run guided Pomodoro study sessions and track exam readiness with spaced repetition.",
+  "name": "Study Tracker",
+  "short_name": "Study",
+  "description": "Scan your syllabus, run guided Pomodoro study sessions and track exam readiness with spaced repetition. Any university, course or semester.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

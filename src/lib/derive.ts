@@ -20,10 +20,11 @@ export function minutesByDay(state: AppState): Record<string, number> {
   return out;
 }
 
+/** the subjects of the student's own semester — and only those.
+    An empty semester must stay empty (with a proper onboarding state),
+    never silently show another semester's content. */
 export function mySubjects(state: AppState): SubjectDTO[] {
-  const sem = state.user.semester;
-  const mine = state.subjects.filter((s) => s.semesterNumber === sem);
-  return mine.length ? mine : state.subjects;
+  return state.subjects.filter((s) => s.semesterNumber === state.user.semester);
 }
 
 export function readinessRows(state: AppState, now = new Date()): ReadinessRow[] {

@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { exams, pastRecords } from "@/db/schema";
 import { currentUser, unauthorized } from "@/lib/auth";
+import { readJsonBody } from "@/lib/http";
 import { loadState } from "@/lib/server-data";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +16,8 @@ type Body =
 export async function POST(req: Request) {
   const user = await currentUser();
   if (!user) return unauthorized();
-  const body = (await req.json()) as Body;
+  const body = await readJsonBody<Body>(req);
+  if (!body) return Response.json({ error: "Invalid request body" }, { status: 400 });
 
   if (body.action === "setExam") {
     await db.delete(exams).where(and(eq(exams.userId, user.id), eq(exams.subjectId, body.subjectId)));

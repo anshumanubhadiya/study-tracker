@@ -95,7 +95,7 @@ export default function LibraryPage() {
     <>
       <Header
         title="Library"
-        sub="GTU syllabus · semester → subject → unit → topic"
+        sub={`${state.user.course} · ${state.user.university} · semester → subject → unit → topic`}
         actions={
           <>
             <button className="iconbtn on" onClick={() => router.push("/library/scan")} aria-label="Syllabus Scanner">
@@ -141,13 +141,23 @@ export default function LibraryPage() {
       {!subjects.length ? (
         <Empty
           icon="scan"
-          title={`Semester ${sem} is empty`}
-          body="Nobody has scanned this semester yet. Upload your syllabus copy — OCR pulls out the units, topics and marks, you correct them, and the whole library grows for everyone."
+          title={`Semester ${sem} has no subjects yet`}
+          body={
+            sem === state.user.semester
+              ? "This is your semester — add your syllabus and the whole app works around it. Upload a copy (OCR pulls out units, topics and marks), or type subjects in manually."
+              : "Nobody has scanned this semester yet. Upload your syllabus copy — OCR pulls out the units, topics and marks, you correct them, and the library grows for everyone."
+          }
           action={
-            <button className="btn primary" style={{ width: "auto" }} onClick={() => router.push("/library/scan")}>
-              <Icon name="scan" />
-              Add via Syllabus Scanner
-            </button>
+            <div className="row" style={{ gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+              <button className="btn primary" style={{ width: "auto" }} onClick={() => router.push("/library/scan")}>
+                <Icon name="scan" />
+                Add via Syllabus Scanner
+              </button>
+              <button className="btn" style={{ width: "auto" }} onClick={() => setAddOpen(true)}>
+                <Icon name="plus" />
+                Add manually
+              </button>
+            </div>
           }
         />
       ) : (

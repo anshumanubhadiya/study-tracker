@@ -1,10 +1,16 @@
 /* GTU Study Tracker — offline shell.
-   App shell is cached so the tracker opens without a network; API calls are
-   network-first with a cached fallback, so a session started on the bus still
-   shows your library. */
+   App shell is cached so the tracker opens without a network.
 
-const CACHE = "gtu-study-v1";
+   API rule: only GLOBAL, shared endpoints are cached, and only when the
+   response is ok. Session-specific endpoints (/api/state, /api/auth/*, …)
+   are NEVER cached — a cached "not signed in" would silently log the user
+   out on the next offline/hiccup reload. */
+
+const CACHE = "gtu-study-v2";
 const SHELL = ["/", "/plan", "/session", "/library", "/progress", "/settings", "/manifest.webmanifest", "/icon.png"];
+
+/* shared reference data — safe to cache for everyone */
+const CACHEABLE_API = new Set(["/api/library", "/api/health", "/api/faculty"]);
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -28,11 +34,22 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   if (url.pathname.startsWith("/api/")) {
+    if (!CACHEABLE_API.has(url.pathname)) {
+      /* user-specific / session endpoint — always live, never cached */
+      event.respondWith(
+        fetch(request).catch(
+          () => new Response(JSON.stringify({ offline: true }), { headers: { "content-type": "application/json" } }),
+        ),
+      );
+      return;
+    }
     event.respondWith(
       fetch(request)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(request, copy));
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(request, copy));
+          }
           return res;
         })
         .catch(() => caches.match(request).then((r) => r || new Response(JSON.stringify({ offline: true }), { headers: { "content-type": "application/json" } }))),

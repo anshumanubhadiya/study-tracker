@@ -29,6 +29,8 @@ export default function SettingsPage() {
   const router = useRouter();
   const { state, saveSettings, planAction, importData, examAction, logout, setToast } = useApp();
   const fileRef = useRef<HTMLInputElement>(null);
+  const uniRef = useRef<HTMLInputElement>(null);
+  const courseRef = useRef<HTMLInputElement>(null);
   const [coachOpen, setCoachOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [rejected, setRejected] = useState<string[]>([]);
@@ -42,12 +44,18 @@ export default function SettingsPage() {
 
   const set = (patch: Parameters<typeof saveSettings>[0]) => void saveSettings(patch).then(() => setToast("Saved"));
 
+  /** text field → save on blur/Enter, but only when it actually changed */
+  function saveText(ref: React.RefObject<HTMLInputElement | null>, current: string, apply: (v: string) => void) {
+    const v = ref.current?.value.trim() ?? "";
+    if (v && v !== current) apply(v);
+  }
+
   async function exportJson() {
     const res = await fetch("/api/data");
     const blob = await res.blob();
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `gtu-study-tracker-backup.json`;
+    a.download = `study-tracker-backup.json`;
     a.click();
     URL.revokeObjectURL(a.href);
     setToast("Backup downloaded");
@@ -87,23 +95,62 @@ export default function SettingsPage() {
         }
       />
 
-      <Section title="Profile">
+      <Section
+        title="Profile"
+        footer="University, course and semester decide which library your readiness score, plan and revision queue are built from. Switching semester keeps everything you have logged."
+      >
         <Row icon="user" tint="var(--blue)" title={state.user.name} sub={state.user.email} />
         <Row
           icon="cap"
           tint="var(--purple)"
-          title="Current semester"
-          value={`Sem ${state.user.semester}`}
+          title={`${state.user.university} · ${state.user.course}`}
+          sub={`Semester ${state.user.semester}`}
           right={
-            <div className="chips" style={{ maxWidth: 190 }}>
-              {[1, 2, 3, 4, 5, 6].map((n) => (
-                <button key={n} className={`chip ${state.user.semester === n ? "on" : ""}`} onClick={() => set({ semester: n })}>
+            <div className="chips" style={{ maxWidth: 175, flexWrap: "wrap", justifyContent: "flex-end" }}>
+              {Array.from({ length: 8 }, (_, i) => i + 1).map((n) => (
+                <button
+                  key={n}
+                  className={`chip ${state.user.semester === n ? "on" : ""}`}
+                  onClick={() => set({ semester: n })}
+                >
                   {n}
                 </button>
               ))}
             </div>
           }
         />
+        <div style={{ display: "flex", gap: 10 }}>
+          <input
+            className="field"
+            ref={uniRef}
+            defaultValue={state.user.university}
+            placeholder="University / college"
+            list="uni-hints"
+            onBlur={() => saveText(uniRef, state.user.university, (university) => set({ university }))}
+            onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+          />
+          <datalist id="uni-hints">
+            {["GTU", "MSU", "VTU", "Mumbai University", "Pune University", "Anna University", "Delhi University", "Osmania University"].map(
+              (u) => (
+                <option key={u} value={u} />
+              ),
+            )}
+          </datalist>
+          <input
+            className="field"
+            ref={courseRef}
+            defaultValue={state.user.course}
+            placeholder="Course — e.g. BCA"
+            list="course-hints"
+            onBlur={() => saveText(courseRef, state.user.course, (course) => set({ course }))}
+            onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+          />
+          <datalist id="course-hints">
+            {["BCA", "B.Sc. (IT)", "B.Sc. (CS)", "B.E. (CSE)", "B.E. (IT)", "B.Tech (CSE)", "MCA", "MBA"].map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
+        </div>
       </Section>
 
       <Card>
@@ -220,7 +267,7 @@ export default function SettingsPage() {
       />
 
       <div className="sect-f center-t" style={{ marginBottom: 20 }}>
-        GTU Study Tracker · openGym-style UI, GTU syllabus brain
+        Study Tracker · any university, any course, any semester
       </div>
 
       {/* ---------------------------------------------------------- AI coach */}

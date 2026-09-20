@@ -2,6 +2,7 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { scans, semesters, subjects, topics, units } from "@/db/schema";
 import { currentUser, unauthorized } from "@/lib/auth";
+import { readJsonBody } from "@/lib/http";
 import { insertSubjectTree, loadState } from "@/lib/server-data";
 import { parseSyllabusText } from "@/lib/syllabus";
 import type { ParsedSyllabus } from "@/lib/types";
@@ -18,7 +19,8 @@ type Body =
 export async function POST(req: Request) {
   const user = await currentUser();
   if (!user) return unauthorized();
-  const body = (await req.json()) as Body;
+  const body = await readJsonBody<Body>(req);
+  if (!body) return Response.json({ error: "Invalid request body" }, { status: 400 });
 
   if (body.action === "parse") {
     const report = parseSyllabusText(body.text ?? "", body.semester ?? user.semester);
@@ -28,7 +30,7 @@ export async function POST(req: Request) {
   if (body.action === "import") {
     const parsed = body.parsed;
     if (!parsed?.subject?.trim()) return Response.json({ error: "Subject name is required" }, { status: 400 });
-    const semNumber = Math.min(6, Math.max(1, parsed.semester || user.semester));
+    const semNumber = Math.min(8, Math.max(1, parsed.semester || user.semester));
     let sem = (await db.select().from(semesters).where(eq(semesters.number, semNumber)).limit(1))[0];
     if (!sem) {
       [sem] = await db.insert(semesters).values({ number: semNumber, name: `Semester ${semNumber}` }).returning();

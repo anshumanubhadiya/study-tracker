@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { exams, pastRecords, planEntries, sessionTopics, studySessions } from "@/db/schema";
 import { currentUser, unauthorized } from "@/lib/auth";
+import { readJsonBody } from "@/lib/http";
 import { applyTopicProgress, loadState } from "@/lib/server-data";
 import { toDayKey } from "@/lib/srs";
 import type { AppState } from "@/lib/types";
@@ -14,10 +15,16 @@ export async function GET() {
   if (!user) return unauthorized();
   const state = await loadState(user);
   const payload = {
-    app: "gtu-study-tracker",
+    app: "study-tracker",
     version: 1,
     exportedAt: new Date().toISOString(),
-    user: { name: state.user.name, semester: state.user.semester, settings: state.user.settings },
+    user: {
+      name: state.user.name,
+      university: state.user.university,
+      course: state.user.course,
+      semester: state.user.semester,
+      settings: state.user.settings,
+    },
     progress: state.progress,
     sessions: state.sessions,
     plan: state.plan,
@@ -27,7 +34,7 @@ export async function GET() {
   return new Response(JSON.stringify(payload, null, 2), {
     headers: {
       "content-type": "application/json",
-      "content-disposition": `attachment; filename="gtu-study-tracker-${toDayKey(new Date())}.json"`,
+      "content-disposition": `attachment; filename="study-tracker-backup-${toDayKey(new Date())}.json"`,
     },
   });
 }
@@ -36,7 +43,8 @@ export async function GET() {
 export async function POST(req: Request) {
   const user = await currentUser();
   if (!user) return unauthorized();
-  const body = (await req.json()) as Partial<AppState> & { plan?: AppState["plan"]; mode?: "merge" | "plan-only" };
+  const body = await readJsonBody<Partial<AppState> & { plan?: AppState["plan"]; mode?: "merge" | "plan-only" }>(req);
+  if (!body) return Response.json({ error: "Invalid request body" }, { status: 400 });
 
   if (body.plan?.length) {
     const existing = await db.select().from(planEntries).where(eq(planEntries.userId, user.id));
