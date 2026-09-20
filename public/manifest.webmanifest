@@ -1,0 +1,20 @@
+{
+  "name": "GTU Study Tracker",
+  "short_name": "GTU Study",
+  "description": "Scan your GTU syllabus, run guided Pomodoro study sessions and track exam readiness with spaced repetition.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "categories": ["education", "productivity"],
+  "icons": [
+    { "src": "/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Start Study Session", "url": "/session" },
+    { "name": "Syllabus Scanner", "url": "/library/scan" }
+  ]
+}
