@@ -1,6 +1,10 @@
-/* GTU BCA — library seed. Only Semester 3 ships populated; every other
-   semester is intentionally empty so it shows the "Add via Syllabus Scanner"
-   empty state and grows from what students actually scan. */
+/* Built-in library seed.
+   ----------------------------------------------------------------------------
+   The tracker is course-agnostic: a student picks their own university,
+   course and semester at signup. Only one sample library ships pre-populated
+   (GTU BCA, Semester 3) so the app is not empty on first run; every other
+   course/semester is intentional-empty and grows from what students scan or
+   type in via the Library. */
 
 export type SeedTopic = { title: string; weightage: number; difficulty?: number; estMinutes?: number };
 export type SeedUnit = { number: number; title: string; weightage: number; topics: SeedTopic[] };
@@ -13,14 +17,14 @@ export type SeedSubject = {
   units: SeedUnit[];
 };
 
-export const SEMESTERS = [
-  { number: 1, name: "Semester 1" },
-  { number: 2, name: "Semester 2" },
-  { number: 3, name: "Semester 3" },
-  { number: 4, name: "Semester 4" },
-  { number: 5, name: "Semester 5" },
-  { number: 6, name: "Semester 6" },
-];
+/** supported range — covers 3-year (6 sem) and 4-year (8 sem) programs */
+export const MIN_SEMESTER = 1;
+export const MAX_SEMESTER = 8;
+
+export const SEMESTERS = Array.from({ length: MAX_SEMESTER }, (_, i) => ({
+  number: i + 1,
+  name: `Semester ${i + 1}`,
+}));
 
 export const SEM3: SeedSubject[] = [
   {

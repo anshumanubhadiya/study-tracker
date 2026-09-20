@@ -15,20 +15,39 @@ import {
   units,
   users,
 } from "@/db/schema";
+import { ensureDb } from "./bootstrap";
 import { SEM3, SEMESTERS, type SeedSubject } from "./seed-data";
 import { DEFAULT_SETTINGS, type AppState, type Mastery, type SubjectDTO, type UserDTO, type UserSettings } from "./types";
 import { nextStability, scheduleNextReview, toDayKey } from "./srs";
 
 /* ------------------------------------------------------------- seeding --- */
 
-export async function ensureSeed() {
-  const existing = await db.select({ n: sql<number>`count(*)::int` }).from(semesters);
-  if ((existing[0]?.n ?? 0) > 0) return;
+async function runSeed(): Promise<void> {
+  await ensureDb();
 
-  const inserted = await db.insert(semesters).values(SEMESTERS).returning();
-  const sem3 = inserted.find((s) => s.number === 3);
+  // every supported semester exists (1..8) — new programs are added for free
+  const existing = await db.select().from(semesters);
+  const have = new Set(existing.map((s) => s.number));
+  const missing = SEMESTERS.filter((s) => !have.has(s.number));
+  if (missing.length) await db.insert(semesters).values(missing);
+
+  // the built-in sample library (GTU BCA Sem 3) is seeded exactly once
+  const [sem3] = await db.select().from(semesters).where(eq(semesters.number, 3)).limit(1);
   if (!sem3) return;
+  const [cnt] = await db.select({ n: sql<number>`count(*)::int` }).from(subjects).where(eq(subjects.semesterId, sem3.id));
+  if ((cnt?.n ?? 0) > 0) return;
   for (const subject of SEM3) await insertSubjectTree(sem3.id, subject, "seed", null);
+}
+
+let seedOnce: Promise<void> | null = null;
+
+/** runs the bootstrap + sample seed exactly once per process (no first-request race) */
+export function ensureSeed(): Promise<void> {
+  seedOnce ??= runSeed().catch((e) => {
+    seedOnce = null;
+    throw e;
+  });
+  return seedOnce;
 }
 
 export async function insertSubjectTree(
@@ -81,6 +100,8 @@ export function toUserDTO(u: typeof users.$inferSelect): UserDTO {
     email: u.email,
     name: u.name,
     isGuest: u.isGuest,
+    university: u.university,
+    course: u.course,
     semester: u.semester,
     theme: (u.theme as "dark" | "light") ?? "dark",
     accent: u.accent,
@@ -276,15 +297,17 @@ export async function applyTopicProgress(
 /* --------------------------------------------------------- demo profile -- */
 
 /** fills a fresh account with ~10 weeks of believable history so the charts,
-    heatmap, streak and readiness curves have something to show. */
+    heatmap, streak and readiness curves have something to show.
+    The whole history is generated in JS first and written with a handful of
+    batched statements — a guest click must never be slow enough to time out. */
 export async function seedDemoData(userId: number) {
   await ensureSeed();
   const library = await loadLibrary();
-  const sem3 = library.subjects.filter((s) => s.semesterNumber === 3);
-  if (!sem3.length) return;
+  const sample = library.subjects.filter((s) => s.semesterNumber === 3);
+  if (!sample.length) return;
 
   // weekly plan: one subject per weekday (Sunday off)
-  const planValues = sem3.slice(0, 6).map((s, i) => ({
+  const planValues = sample.slice(0, 6).map((s, i) => ({
     userId,
     weekday: (i + 1) % 7,
     subjectId: s.id,
@@ -292,12 +315,12 @@ export async function seedDemoData(userId: number) {
     targetMinutes: 50,
     position: i,
   }));
-  await db.insert(planEntries).values(planValues);
+  if (planValues.length) await db.insert(planEntries).values(planValues);
 
   // exam dates ~3-6 weeks out
   const today = new Date();
   await db.insert(exams).values(
-    sem3.slice(0, 4).map((s, i) => ({
+    sample.slice(0, 4).map((s, i) => ({
       userId,
       subjectId: s.id,
       examDay: toDayKey(new Date(today.getTime() + (21 + i * 4) * 86400000)),
@@ -309,9 +332,26 @@ export async function seedDemoData(userId: number) {
     { userId, label: "Sem 3 — Unit Test 1", marks: 24, outOf: 40, attendance: 78, semester: 3 },
   ]);
 
-  const allTopics = sem3.flatMap((s) => s.units.flatMap((u) => u.topics.map((t) => ({ t, u, s }))));
+  const allTopics = sample.flatMap((s) => s.units.flatMap((u) => u.topics.map((t) => ({ t, u, s }))));
   let rnd = 20260214;
   const rand = () => ((rnd = (rnd * 1103515245 + 12345) % 2147483648) / 2147483648);
+
+  // accumulate the per-topic end state in JS instead of one round trip each
+  type Acc = { mastery: Mastery; confidence: number; minutes: number; when: Date; stability: number; count: number };
+  const progress = new Map<number, Acc>();
+
+  const sessionRows: {
+    userId: number;
+    day: string;
+    kind: "pomodoro" | "long";
+    minutes: number;
+    focusQuality: number;
+    pomodoros: number;
+    notes: string;
+    startedAt: Date;
+    endedAt: Date;
+  }[] = [];
+  const stRows: { slot: number; topicId: number; minutes: number; masteryAfter: Mastery; confidenceAfter: number }[] = [];
 
   // 70 days of history, ~5 study days a week
   for (let dayOffset = 69; dayOffset >= 0; dayOffset--) {
@@ -323,20 +363,18 @@ export async function seedDemoData(userId: number) {
     const blocks = 1 + Math.floor(rand() * 3);
     const minutes = blocks * 25 + Math.floor(rand() * 20);
     date.setHours(18, 0, 0, 0);
-    const [session] = await db
-      .insert(studySessions)
-      .values({
-        userId,
-        day: toDayKey(date),
-        kind: rand() < 0.2 ? "long" : "pomodoro",
-        minutes,
-        focusQuality: 3 + Math.round(rand()),
-        pomodoros: blocks,
-        notes: "",
-        startedAt: date,
-        endedAt: new Date(date.getTime() + minutes * 60000),
-      })
-      .returning();
+    sessionRows.push({
+      userId,
+      day: toDayKey(date),
+      kind: rand() < 0.2 ? "long" : "pomodoro",
+      minutes,
+      focusQuality: 3 + Math.round(rand()),
+      pomodoros: blocks,
+      notes: "",
+      startedAt: date,
+      endedAt: new Date(date.getTime() + minutes * 60000),
+    });
+    const slot = sessionRows.length - 1;
 
     const picked = new Set<number>();
     for (let i = 0; i < blocks; i++) {
@@ -347,26 +385,72 @@ export async function seedDemoData(userId: number) {
       const roll = rand();
       const mastery: Mastery = roll < 0.45 ? "learning" : roll < 0.8 ? "revised" : "exam_ready";
       const confidence = 2 + Math.floor(rand() * 4);
-      await db.insert(sessionTopics).values({
-        sessionId: session.id,
-        topicId: entry.t.id,
-        minutes: Math.round(minutes / blocks),
-        masteryAfter: mastery,
-        confidenceAfter: confidence,
-      });
-      await applyTopicProgress(userId, entry.t.id, {
-        mastery,
-        confidence,
-        minutes: Math.round(minutes / blocks),
-        when: date,
-        difficulty: entry.t.difficulty,
-      });
+      const tMin = Math.round(minutes / blocks);
+      stRows.push({ slot, topicId: entry.t.id, minutes: tMin, masteryAfter: mastery, confidenceAfter: confidence });
+
+      const acc =
+        progress.get(entry.t.id) ??
+        ({ mastery: "learning", confidence: 3, minutes: 0, when: date, stability: 1.5, count: 0 } as Acc);
+      acc.stability = nextStability(acc.stability, confidence, entry.t.difficulty);
+      acc.mastery = mastery;
+      acc.confidence = confidence;
+      acc.minutes += tMin;
+      acc.when = date;
+      acc.count += 1;
+      progress.set(entry.t.id, acc);
     }
+  }
+
+  const sessions = sessionRows.length
+    ? await db.insert(studySessions).values(sessionRows).returning()
+    : [];
+  if (stRows.length && sessions.length) {
+    await db.insert(sessionTopics).values(
+      stRows.map((s) => ({
+        sessionId: sessions[s.slot]?.id ?? sessions[0]!.id,
+        topicId: s.topicId,
+        minutes: s.minutes,
+        masteryAfter: s.masteryAfter,
+        confidenceAfter: s.confidenceAfter,
+      })),
+    );
+  }
+
+  // one upsert for the whole 70-day progress history (was ~150 round trips)
+  if (progress.size) {
+    await db
+      .insert(topicProgress)
+      .values(
+        [...progress.entries()].map(([topicId, a]) => ({
+          userId,
+          topicId,
+          mastery: a.mastery,
+          confidence: a.confidence,
+          stability: a.stability,
+          reviewCount: a.count,
+          totalMinutes: a.minutes,
+          lastStudiedAt: a.when,
+          nextReviewAt: scheduleNextReview(a.mastery, a.confidence, a.stability, a.when),
+        })),
+      )
+      .onConflictDoUpdate({
+        target: [topicProgress.userId, topicProgress.topicId],
+        set: {
+          mastery: sql`excluded.mastery`,
+          confidence: sql`excluded.confidence`,
+          stability: sql`excluded.stability`,
+          nextReviewAt: sql`excluded.next_review_at`,
+          lastStudiedAt: sql`excluded.last_studied_at`,
+          reviewCount: sql`${topicProgress.reviewCount} + excluded.review_count`,
+          totalMinutes: sql`${topicProgress.totalMinutes} + excluded.total_minutes`,
+          updatedAt: sql`now()`,
+        },
+      });
   }
 
   await db.insert(scans).values({
     userId,
-    fileName: "gtu-sem3-oop-java.pdf",
+    fileName: "sample-syllabus-oop-java.pdf",
     rawText: "Sample scan kept as history — Syllabus Scanner import",
     parsed: null,
     status: "saved",

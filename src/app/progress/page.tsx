@@ -64,7 +64,7 @@ export default function ProgressPage() {
           <div className="grow">
             <div className="t-head">Overall readiness</div>
             <p className="t-foot muted" style={{ marginTop: 4 }}>
-              Mastery × GTU marks weightage, faded by the forgetting curve. It goes down if you stop revising — that is the point.
+              Mastery × exam-marks weightage, faded by the forgetting curve. It goes down if you stop revising — that is the point.
             </p>
             <div className="row" style={{ gap: 6, marginTop: 10, flexWrap: "wrap" }}>
               <span className="tag">{view.examReady} exam-ready topics</span>
@@ -127,6 +127,14 @@ export default function ProgressPage() {
           </Card>
 
           <Section title="Subject readiness" footer="Tap a subject to set its exam date — the closer it is, the harder its topics push in the queue.">
+            {view.rows.length === 0 ? (
+              <Row
+                icon="scan"
+                tint="var(--blue)"
+                title={`No subjects in Semester ${state.user.semester} yet`}
+                sub="Add your syllabus in the Library — readiness appears here the moment you log progress"
+              />
+            ) : null}
             {view.rows.map((r) => (
               <Row
                 key={r.subjectId}

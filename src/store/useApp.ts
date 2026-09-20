@@ -2,19 +2,26 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { authHeaders, saveSessionToken } from "@/lib/client-auth";
 import type { AppState, Mastery, UserDTO, UserSettings } from "@/lib/types";
 
 /* ------------------------------------------------------------- api call -- */
 
 async function api<T>(url: string, body?: unknown, method = "POST"): Promise<T> {
+  const headers: Record<string, string> = { ...authHeaders() };
+  if (body) headers["content-type"] = "application/json";
   const res = await fetch(url, {
     method: body === undefined && method === "POST" ? "GET" : method,
-    headers: body ? { "content-type": "application/json" } : undefined,
+    headers: Object.keys(headers).length ? headers : undefined,
     body: body ? JSON.stringify(body) : undefined,
     cache: "no-store",
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((data as { error?: string }).error ?? "Something went wrong");
+  if (!res.ok) {
+    const err = (data as { error?: string }).error ?? "Something went wrong";
+    if (res.status === 401) saveSessionToken(null); // dead session — drop the token
+    throw new Error(err);
+  }
   return data as T;
 }
 
@@ -42,6 +49,7 @@ type Store = {
   state: AppState | null;
   loading: boolean;
   authChecked: boolean;
+  authError: string;
   toast: string;
   active: ActiveSession | null;
 
@@ -53,6 +61,8 @@ type Store = {
     name?: string;
     theme?: string;
     accent?: string;
+    university?: string;
+    course?: string;
     semester?: number;
     settings?: Partial<UserSettings>;
   }) => Promise<void>;
@@ -84,6 +94,7 @@ export const useApp = create<Store>()(
       state: null,
       loading: true,
       authChecked: false,
+      authError: "",
       toast: "",
       active: null,
 
@@ -91,9 +102,9 @@ export const useApp = create<Store>()(
         set({ loading: true });
         try {
           const state = await api<AppState>("/api/state", undefined, "GET");
-          set({ state, loading: false, authChecked: true });
-        } catch {
-          set({ state: null, loading: false, authChecked: true });
+          set({ state, loading: false, authChecked: true, authError: "" });
+        } catch (e) {
+          set({ state: null, loading: false, authChecked: true, authError: e instanceof Error ? e.message : "" });
         }
       },
 
@@ -155,7 +166,8 @@ export const useApp = create<Store>()(
 
       async logout() {
         await api("/api/auth/logout", {});
-        set({ state: null, active: null });
+        saveSessionToken(null);
+        set({ state: null, active: null, authError: "" });
       },
 
       startSession(topicIds, kind, focusMinutes) {

@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { sessionTopics, studySessions } from "@/db/schema";
 import { currentUser, unauthorized } from "@/lib/auth";
+import { readJsonBody } from "@/lib/http";
 import { applyTopicProgress, loadState } from "@/lib/server-data";
 import { toDayKey } from "@/lib/srs";
 import type { Mastery } from "@/lib/types";
@@ -18,9 +19,10 @@ type Body = {
 };
 
 export async function POST(req: Request) {
-  const user = await currentUser();
+  const user = await currentUser(req);
   if (!user) return unauthorized();
-  const body = (await req.json()) as Body;
+  const body = await readJsonBody<Body>(req);
+  if (!body) return Response.json({ error: "Invalid request body" }, { status: 400 });
 
   const started = body.startedAt ? new Date(body.startedAt) : new Date();
   const minutes = Math.max(0, Math.round(body.minutes || 0));

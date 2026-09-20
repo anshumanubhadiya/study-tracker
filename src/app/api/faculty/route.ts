@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { currentUser, unauthorized } from "@/lib/auth";
+import { ensureDb } from "@/lib/bootstrap";
 
 export const dynamic = "force-dynamic";
 
@@ -9,8 +10,9 @@ export const dynamic = "force-dynamic";
  * Only profiles that switched `facultyOptIn` on are counted, and nothing
  * identifying ever leaves this endpoint — just class-level averages.
  */
-export async function GET() {
-  const user = await currentUser();
+export async function GET(req: Request) {
+  await ensureDb();
+  const user = await currentUser(req);
   if (!user) return unauthorized();
 
   const rows = await db.execute(sql`

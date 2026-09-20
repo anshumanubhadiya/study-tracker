@@ -9,7 +9,7 @@
       memory "stability" in days. Every successful review multiplies S, a weak
       confidence rating shrinks it — so shaky topics come back sooner, forever.
    3. READINESS is the weighted average of (level × retention) over a subject,
-      weighted by GTU exam marks. A 14-mark unit you never opened hurts far more
+      weighted by exam marks. A 14-mark unit you never opened hurts far more
       than a 3-mark side topic.
    ========================================================================== */
 

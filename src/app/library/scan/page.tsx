@@ -173,7 +173,7 @@ export default function ScanPage() {
                   disabled={Boolean(busy)}
                 >
                   <Icon name="scan" style={{ fontSize: 34 }} />
-                  {busy || "Tap to upload your GTU syllabus copy"}
+                  {busy || "Tap to upload your syllabus copy"}
                   <span className="t-foot muted">PDF page or a photo of the printed copy</span>
                 </button>
                 {busy ? (
@@ -204,10 +204,10 @@ export default function ScanPage() {
             )}
           </Card>
 
-          <Section title="Why this exists" footer="Every scan a student corrects makes the shared GTU library better for the next batch.">
+          <Section title="Why this exists" footer="Every scan a student corrects makes the shared library better for the next batch.">
             <Row icon="doc" tint="var(--blue)" title="Your syllabus is a PDF, not a plan" sub="Scan it once, track it all semester" />
             <Row icon="grid" tint="var(--purple)" title="Marks weightage comes along" sub="Readiness is weighted by what the paper actually asks" />
-            <Row icon="users" tint="var(--orange)" title="Crowd-sourced library" sub="Semesters 1, 2, 4, 5, 6 grow from scans like yours" />
+            <Row icon="users" tint="var(--orange)" title="Crowd-sourced library" sub="Every course and semester grows from scans like yours" />
           </Section>
         </>
       ) : null}
@@ -254,7 +254,7 @@ export default function ScanPage() {
             </div>
             <span className="sect-t">Semester</span>
             <div className="chips">
-              {[1, 2, 3, 4, 5, 6].map((n) => (
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
                 <button key={n} className={`chip ${draft.semester === n ? "on" : ""}`} onClick={() => patchDraft((d) => (d.semester = n))}>
                   Sem {n}
                 </button>

@@ -43,9 +43,15 @@ export function readToken(token: string | undefined): number | null {
 
 export async function setSession(userId: number) {
   const jar = await cookies();
+  // The preview is embedded in an iframe (third-party context). A `lax`
+  // cookie is not sent there, which made sign-in look broken. `none` +
+  // `secure` is the only way for the cookie to work embedded; the
+  // Authorization-token fallback in client-auth.ts covers the browsers that
+  // block third-party cookies entirely.
   jar.set(COOKIE, makeToken(userId), {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "none",
+    secure: true,
     path: "/",
     maxAge: 60 * 60 * 24 * 180,
   });
@@ -56,13 +62,29 @@ export async function clearSession() {
   jar.delete(COOKIE);
 }
 
-export async function currentUserId(): Promise<number | null> {
+/**
+ * Session tokens travel over two paths:
+ *  1. httpOnly cookie (normal browsers)
+ *  2. Authorization: Bearer header (for preview/proxy contexts where the
+ *     browser refuses to persist or send the cookie — the token is returned
+ *     in the sign-in response and kept in localStorage by the client)
+ */
+export function tokenFromRequest(req: Request | undefined): string | null {
+  if (!req) return null;
+  const auth = req.headers.get("authorization");
+  if (auth?.startsWith("Bearer ")) return auth.slice(7);
+  return req.headers.get("x-session-token");
+}
+
+export async function currentUserId(req?: Request): Promise<number | null> {
+  const fromHeader = readToken(tokenFromRequest(req) ?? undefined);
+  if (fromHeader) return fromHeader;
   const jar = await cookies();
   return readToken(jar.get(COOKIE)?.value);
 }
 
-export async function currentUser() {
-  const id = await currentUserId();
+export async function currentUser(req?: Request) {
+  const id = await currentUserId(req);
   if (!id) return null;
   const rows = await db.select().from(users).where(eq(users.id, id)).limit(1);
   return rows[0] ?? null;

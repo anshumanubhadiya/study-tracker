@@ -32,6 +32,7 @@ export default function HomePage() {
     const now = new Date();
     const pm = progressMap(state.progress);
     const index = buildTopicIndex(state.subjects);
+    const mine = mySubjects(state);
     const rows = readinessRows(state, now);
     const examMap = new Map(state.exams.map((e) => [e.subjectId, e.examDay]));
     const due = dueQueue(mySubjects(state), pm, { now, examDays: examMap, limit: 5 });
@@ -47,6 +48,7 @@ export default function HomePage() {
     return {
       now,
       index,
+      mine,
       rows,
       readiness: overallReadiness(rows),
       due,
@@ -122,7 +124,31 @@ export default function HomePage() {
 
       <div className="cols">
         <div>
-          {/* ---------------------------------------------------- readiness */}
+          {/* ----------------------------- empty semester onboarding -------- */}
+          {view.mine.length === 0 ? (
+            <Card>
+              <h2>Set up Semester {state.user.semester}</h2>
+              <p className="t-sub muted" style={{ marginTop: 4 }}>
+                No subjects for <b>{state.user.course} · Semester {state.user.semester}</b> ({state.user.university}) on
+                this server yet. Add your syllabus and the tracker takes over — readiness score, spaced repetition and
+                the weekly plan.
+              </p>
+              <div className="row" style={{ gap: 8, marginTop: 14, flexWrap: "wrap" }}>
+                <button className="btn primary" onClick={() => router.push("/library/scan")}>
+                  <Icon name="scan" />
+                  Scan my syllabus
+                </button>
+                <button className="btn" onClick={() => router.push("/library")}>
+                  <Icon name="plus" />
+                  Add subjects manually
+                </button>
+              </div>
+              <div className="progline" style={{ marginTop: 14 }}>
+                <Icon name="info" />
+                <span>Built-in sample library: GTU BCA · Sem 3 — set your semester to 3 in Settings to browse it.</span>
+              </div>
+            </Card>
+          ) : (
           <Card>
             <h2>Exam readiness</h2>
             <div className="row" style={{ gap: 16 }}>
@@ -144,11 +170,12 @@ export default function HomePage() {
             <div className="progline">
               <Icon name="info" />
               <span>
-                Weighted by GTU marks and faded by the forgetting curve — a 14-mark unit you never opened costs more than a
+                Weighted by exam marks and faded by the forgetting curve — a 14-mark unit you never opened costs more than a
                 3-mark one.
               </span>
             </div>
           </Card>
+          )}
 
           {/* -------------------------------------------------------- tiles */}
           <div className="tiles">

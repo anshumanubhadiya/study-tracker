@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { planEntries, planOverrides } from "@/db/schema";
 import { currentUser, unauthorized } from "@/lib/auth";
+import { readJsonBody } from "@/lib/http";
 import { loadState } from "@/lib/server-data";
 
 export const dynamic = "force-dynamic";
@@ -14,9 +15,10 @@ type Body =
   | { action: "clearOverride"; id: number };
 
 export async function POST(req: Request) {
-  const user = await currentUser();
+  const user = await currentUser(req);
   if (!user) return unauthorized();
-  const body = (await req.json()) as Body;
+  const body = await readJsonBody<Body>(req);
+  if (!body) return Response.json({ error: "Invalid request body" }, { status: 400 });
 
   if (body.action === "add") {
     const count = await db.select().from(planEntries).where(eq(planEntries.userId, user.id));

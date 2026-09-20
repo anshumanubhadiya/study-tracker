@@ -1,4 +1,5 @@
 import { currentUser, unauthorized } from "@/lib/auth";
+import { readJsonBody } from "@/lib/http";
 import { applyTopicProgress, loadState } from "@/lib/server-data";
 import type { Mastery } from "@/lib/types";
 
@@ -13,10 +14,11 @@ type Body = {
 };
 
 export async function POST(req: Request) {
-  const user = await currentUser();
+  const user = await currentUser(req);
   if (!user) return unauthorized();
 
-  const body = (await req.json()) as Body | Body[];
+  const body = await readJsonBody<Body | Body[]>(req);
+  if (!body) return Response.json({ error: "Invalid request body" }, { status: 400 });
   const items = Array.isArray(body) ? body : [body];
   for (const item of items) {
     if (!item?.topicId) continue;
