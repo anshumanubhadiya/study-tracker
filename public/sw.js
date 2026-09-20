@@ -7,7 +7,7 @@
    out on the next offline/hiccup reload. */
 
 const CACHE = "gtu-study-v3";
-const SHELL = ["/", "/plan", "/session", "/library", "/progress", "/settings", "/manifest.webmanifest", "/icon.png"];
+const SHELL = ["/", "/plan", "/session", "/library", "/progress", "/settings", "/manifest.webmanifest", "/icon.svg"];
 
 /* shared reference data — safe to cache for everyone */
 const CACHEABLE_API = new Set(["/api/library", "/api/health", "/api/faculty"]);

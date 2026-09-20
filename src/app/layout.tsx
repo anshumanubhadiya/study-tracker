@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     "Syllabus-aware study companion for any university, course and semester — scan your syllabus, run guided Pomodoro sessions, and track exam readiness with spaced repetition.",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Study" },
-  icons: { icon: "/icon.png", apple: "/icon.png" },
+  icons: { icon: "/icon.svg", apple: "/icon.svg" },
 };
 
 export const viewport: Viewport = {
